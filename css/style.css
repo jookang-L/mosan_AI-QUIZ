@@ -6,7 +6,7 @@ img{max-width:100%}
   --bg:#BFE7FF; --bg2:#A6DAFA; --panel:#FFF8E3; --panel2:#FFFFFF; --stage:#FFF8E3;
   --ink:#2B2458; --line:#2B2458; --muted:#5E5A8C; --chip:#ECE8FF;
   --sun:#FFC83D; --sun-ink:#3E2B00; --grape:#7B5CFF; --grape-ink:#FFFFFF;
-  --leaf:#42C46B; --leaf-ink:#0B3318; --coral:#FF6F61; --coral-ink:#3F0C07;
+  --leaf:#42C46B; --leaf-ink:#0B3318; --coral:#FF6F61; --coral-ink:#3F0C07; --red:#F03E3E; --veil:rgba(255,255,255,.62);
   --floorA:#EAF1FF; --floorB:#DCE7FB; --wall:#B9C9EE;
   --font-display:"Jua","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
   --font-body:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;
@@ -16,7 +16,7 @@ img{max-width:100%}
     --bg:#171B45; --bg2:#20256B; --panel:#272D6E; --panel2:#323A8C;
     --ink:#F4F2FF; --line:#090B26; --muted:#B8BBE8; --chip:#3B4399;
     --sun:#FFD257; --sun-ink:#3A2900; --grape:#9B84FF; --grape-ink:#12103A;
-    --leaf:#4ED47B; --leaf-ink:#06280F; --coral:#FF8A7E; --coral-ink:#3A0A05;
+    --leaf:#4ED47B; --leaf-ink:#06280F; --coral:#FF8A7E; --coral-ink:#3A0A05; --red:#FF6B6B; --veil:rgba(8,10,36,.62);
     --floorA:#2D3586; --floorB:#272F7B; --wall:#1D2366; color-scheme:dark;
   }
 }
@@ -24,7 +24,7 @@ img{max-width:100%}
   --bg:#171B45; --bg2:#20256B; --panel:#272D6E; --panel2:#323A8C;
   --ink:#F4F2FF; --line:#090B26; --muted:#B8BBE8; --chip:#3B4399;
   --sun:#FFD257; --sun-ink:#3A2900; --grape:#9B84FF; --grape-ink:#12103A;
-  --leaf:#4ED47B; --leaf-ink:#06280F; --coral:#FF8A7E; --coral-ink:#3A0A05;
+  --leaf:#4ED47B; --leaf-ink:#06280F; --coral:#FF8A7E; --coral-ink:#3A0A05; --red:#FF6B6B; --veil:rgba(8,10,36,.62);
   --floorA:#2D3586; --floorB:#272F7B; --wall:#1D2366; color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -269,5 +269,14 @@ details[open] summary{margin-bottom:8px}
 .slot.pulse{animation:flash .6s ease-out}
 .badges{grid-template-columns:repeat(6,minmax(0,1fr))}
 @media (max-width:349px){.bins.n3{grid-template-columns:minmax(0,1fr)} .badges{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* 정답(초록 동그라미)·오답(빨간 X) 효과: 화면 전체를 흐리게 하고 가운데에 크게 보였다가 사라진다. 손가락 입력은 막지 않는다. */
+#fx{position:fixed; inset:0; z-index:100; display:grid; place-items:center; pointer-events:none; opacity:0; visibility:hidden; transition:opacity .25s, visibility 0s .25s}
+#fx.on{opacity:1; visibility:visible; transition:opacity .1s}
+#fx::before{content:""; position:absolute; inset:0; background:var(--veil); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px)}
+#fx svg{position:relative; width:min(56vw,230px); height:auto; filter:drop-shadow(0 7px 0 rgba(0,0,0,.2))}
+#fx.on.ok svg{animation:fxpop .45s cubic-bezier(.2,1.5,.4,1) both}
+#fx.on.bad svg{animation:fxshake .5s both}
+@keyframes fxpop{0%{transform:scale(.4); opacity:0}60%{transform:scale(1.08); opacity:1}100%{transform:scale(1); opacity:1}}
+@keyframes fxshake{0%{transform:scale(.5); opacity:0}30%{transform:scale(1.06); opacity:1}45%{transform:translateX(-12px)}60%{transform:translateX(12px)}75%{transform:translateX(-7px)}100%{transform:translateX(0) scale(1); opacity:1}}
 @media (prefers-reduced-motion: reduce){*{animation:none !important; transition:none !important}}
 :root[data-reduce="1"] *{animation:none !important; transition:none !important}

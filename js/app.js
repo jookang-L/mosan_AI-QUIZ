@@ -8,6 +8,22 @@ var ROOMS = (function () {
   return list;
 })();
 
+/* 정답이면 초록 동그라미, 오답이면 빨간 X를 화면 가운데에 잠깐 크게 보여 준다(#app 밖에 둬서 화면이 다시 그려져도 유지된다) */
+var fxEl = document.createElement('div'), fxTimer = null;
+fxEl.id = 'fx'; fxEl.setAttribute('aria-hidden', 'true'); document.body.appendChild(fxEl);
+var FX_SHAPE = {
+  ok: '<svg viewBox="0 0 200 200" fill="none"><circle cx="100" cy="100" r="68" style="stroke:var(--line)" stroke-width="38"/><circle cx="100" cy="100" r="68" style="stroke:var(--leaf)" stroke-width="22"/></svg>',
+  bad: '<svg viewBox="0 0 200 200" fill="none" stroke-linecap="round"><path d="M50 50L150 150M150 50L50 150" style="stroke:var(--line)" stroke-width="38"/><path d="M50 50L150 150M150 50L50 150" style="stroke:var(--red)" stroke-width="22"/></svg>'
+};
+
+function flash(kind) {
+  clearTimeout(fxTimer);
+  fxEl.className = ''; fxEl.innerHTML = FX_SHAPE[kind];
+  void fxEl.offsetWidth;
+  fxEl.className = 'on ' + kind;
+  fxTimer = setTimeout(function () { fxEl.className = ''; }, 800);
+}
+
 function polish(html) {
   return html.replace(/>([^<>]+)</g, function (m, t) {
     t = t.replace(/\//g, '⁠/⁠').replace(/([가-힣A-Za-z0-9])·/g,'$1⁠·').replace(/·/g, '·<wbr>').replace(/([가-힣’”])\(/g, '$1⁠(').replace(/([’”])([가-힣])/g, '$1⁠$2').replace(/\)([가-힣]{1,3})(?![가-힣])/g, ')⁠$1');
@@ -16,18 +32,19 @@ function polish(html) {
 }
 
 function render() {
-  var app = $('app'), h = '', s = UI.screen;
+  var app = $('app'), h = '', s = UI.screen, fx = null;
   document.documentElement.setAttribute('data-reduce', S.reduce ? '1' : '0');
   if (s === 'title') h = sTitle();
   else if (s === 'make') h = sMake();
   else if (s === 'listen') h = sListen();
   else if (s === 'mission') h = hud() + sMission();
   else if (s === 'lab') h = sLab();
-  else if (s === 'game') h = sGame();
+  else if (s === 'game') { if (G && G.react && G.react.fresh) fx = G.react.kind === 'bad' ? 'bad' : 'ok'; h = sGame(); }
   else if (s === 'clear') h = sClear();
   else { h = hud() + (UI.tab === 'dex' ? sDex() : UI.tab === 'me' ? sMe() : sLobby()) + tabs(); }
   app.innerHTML = polish('<div class="app">' + h + '</div>');
   if (s === 'lab') placeLab();
+  if (fx) flash(fx);
   if (UI.snap) {
     var t = app.querySelector(UI.snap); UI.snap = null;
     if (t) { var b = t.getBoundingClientRect(); if (b.bottom > window.innerHeight || b.top < 0) t.scrollIntoView({ block: 'nearest', behavior: S.reduce ? 'auto' : 'smooth' }); }
