@@ -8,9 +8,15 @@ img{max-width:100%}
   --sun:#FFC83D; --sun-ink:#3E2B00; --grape:#7B5CFF; --grape-ink:#FFFFFF;
   --leaf:#42C46B; --leaf-ink:#0B3318; --coral:#FF6F61; --coral-ink:#3F0C07; --red:#F03E3E; --veil:rgba(255,255,255,.62);
   --floorA:#EAF1FF; --floorB:#DCE7FB; --wall:#B9C9EE;
-  --font-display:"Jua","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
-  --font-body:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;
+  --font-display:"A2Z Display","A2Z","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+  --font-body:"A2Z","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;
 }
+/* 에이투지체(SIL OFL 1.1) — 앱에서 쓰는 글자만 남긴 woff2. 제목·버튼용 "A2Z Display"는 Black을 weight 400으로 걸어 둔 이름 */
+@font-face{font-family:"A2Z"; font-weight:400; font-display:swap; src:url(../fonts/a2z-400.woff2) format("woff2")}
+@font-face{font-family:"A2Z"; font-weight:500; font-display:swap; src:url(../fonts/a2z-500.woff2) format("woff2")}
+@font-face{font-family:"A2Z"; font-weight:700; font-display:swap; src:url(../fonts/a2z-700.woff2) format("woff2")}
+@font-face{font-family:"A2Z"; font-weight:900; font-display:swap; src:url(../fonts/a2z-900.woff2) format("woff2")}
+@font-face{font-family:"A2Z Display"; font-weight:400; font-display:swap; src:url(../fonts/a2z-900.woff2) format("woff2")}
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#171B45; --bg2:#20256B; --panel:#272D6E; --panel2:#323A8C;
@@ -146,7 +152,8 @@ p{margin:0}
 .gcard.broken{background:var(--coral); color:var(--coral-ink)}
 .hint{text-align:center; font-size:15px; font-weight:700}
 .bins{display:grid; gap:12px}
-.bins.n3{grid-template-columns:repeat(3,1fr)}
+.bins.n3{grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px}
+.bins.n3 .bin{font-size:clamp(14px,4vw,18px); padding-inline:4px}
 .bins.n4{grid-template-columns:repeat(2,1fr)}
 .bin{min-height:76px; padding:10px 6px; border:3px solid var(--line); border-radius:18px; background:var(--chip); color:var(--ink); box-shadow:0 4px 0 var(--line); font-family:var(--font-display); font-size:18px; display:flex; flex-direction:column; gap:4px; align-items:center; justify-content:center; line-height:1.2; touch-action:manipulation; cursor:pointer}
 .bin .ico{width:24px; height:24px}
@@ -268,7 +275,9 @@ details[open] summary{margin-bottom:8px}
 .slot.ok .why,.slot.fixed .why{color:inherit}
 .slot.pulse{animation:flash .6s ease-out}
 .badges{grid-template-columns:repeat(6,minmax(0,1fr))}
-@media (max-width:349px){.bins.n3{grid-template-columns:minmax(0,1fr)} .badges{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:349px){.bins.n3{grid-template-columns:minmax(0,1fr); gap:12px} .bins.n3 .bin{font-size:18px} .badges{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .hud .btn.small{font-size:15px; padding:6px 10px; gap:6px} .who b{white-space:normal; line-height:1.15}
+  .room{flex-wrap:wrap; gap:10px 12px; padding:14px} .room .tx{flex:1 1 150px} .room .st{margin-left:58px}}
 /* 정답(초록 동그라미)·오답(빨간 X) 효과: 화면 전체를 흐리게 하고 가운데에 크게 보였다가 사라진다. 손가락 입력은 막지 않는다. */
 #fx{position:fixed; inset:0; z-index:100; display:grid; place-items:center; pointer-events:none; opacity:0; visibility:hidden; transition:opacity .25s, visibility 0s .25s}
 #fx.on{opacity:1; visibility:visible; transition:opacity .1s}
