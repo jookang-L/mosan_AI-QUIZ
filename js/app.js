@@ -44,7 +44,8 @@ function render() {
   else { h = hud() + (UI.tab === 'dex' ? sDex() : UI.tab === 'me' ? sMe() : sLobby()) + tabs(); }
   app.innerHTML = polish('<div class="app">' + h + '</div>');
   if (s === 'lab') placeLab();
-  if (fx) flash(fx);
+  if (fx) { flash(fx); SND.judge(fx); }
+  SND.sync();
   if (UI.snap) {
     var t = app.querySelector(UI.snap); UI.snap = null;
     if (t) { var b = t.getBoundingClientRect(); if (b.bottom > window.innerHeight || b.top < 0) t.scrollIntoView({ block: 'nearest', behavior: S.reduce ? 'auto' : 'smooth' }); }
@@ -101,6 +102,9 @@ function act(a, el) {
     case 'title': S.titleId = +v; save(); render(); break;
     case 'equip': for (k = 0; k < ITEMS.length; k++) if (ITEMS[k].id === v && cleared(ITEMS[k].room)) { S.equip[ITEMS[k].slot] = S.equip[ITEMS[k].slot] === v ? null : v; save(); render(); } break;
     case 'reduce': S.reduce = !S.reduce; save(); render(); break;
+    case 'snd': S.sfx = S.bgm = !(S.sfx || S.bgm); save(); render(); break;
+    case 'sfx': S.sfx = !S.sfx; save(); render(); break;
+    case 'bgm': S.bgm = !S.bgm; save(); render(); break;
     case 'devclear': if (!DEV) break; for (k = 1; k <= 5; k++) if (!cleared(k)) { S.rooms[k] = { cleared: true, ok: 8, fixed: 0, weak: [] }; eachItem(room(k), function (x) { var c = conceptOf(x.topic); if (!S.topics[c]) S.topics[c] = 'ok'; }); } if (!S.titleId) S.titleId = 3; save(); render(); break;
     case 'devreset': if (!DEV) break; try { localStorage.removeItem(KEY); } catch (e) {} S = fresh(); dropG(); UI.back = null; UI.tab = 'lobby'; go('title'); break;
   }
@@ -108,7 +112,7 @@ function act(a, el) {
 
 $('app').addEventListener('click', function (e) {
   var el = e.target.closest ? e.target.closest('[data-a]') : null;
-  if (el) act(el.getAttribute('data-a'), el);
+  if (el) { SND.begin(); act(el.getAttribute('data-a'), el); SND.after(); }
 });
 
 document.addEventListener('keydown', function (e) {

@@ -51,6 +51,8 @@ var ICONS = {
   cards: '<rect x="4" y="3" width="12" height="16" rx="2"/><path d="M8 21h10a2 2 0 0 0 2-2V8"/>',
   bug: '<path d="M9 9V8a3 3 0 0 1 6 0v1"/><path d="M8 9h8a6 6 0 0 1 1 3v3a5 5 0 0 1-10 0v-3a6 6 0 0 1 1-3"/><path d="M3 13h4M17 13h4M12 20v-6M4 19l3.35-2M20 19l-3.35-2M4 7l3.75 2.4M20 7l-3.75 2.4"/>',
   tool: '<path d="M7 10h3V7L6.5 3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1-3 3l-6-6a6 6 0 0 1-8-8L7 10"/>',
+  vol: '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>',
+  mute: '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M16 9l6 6M22 9l-6 6"/>',
   lc_trophy: '<path d="M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2"/><path d="M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2"/><path d="M17.916 10H19.5A2.5 2.5 0 0 0 22 7.5V5a1 1 0 0 0-1-1h-3"/><path d="M4 22h16"/><path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"/><path d="M6.084 10H4.5A2.5 2.5 0 0 1 2 7.5V5a1 1 0 0 1 1-1h3"/>',
   lc_glasses: '<circle cx="6" cy="15" r="4"/><circle cx="18" cy="15" r="4"/><path d="M14 15a2 2 0 0 0-2-2 2 2 0 0 0-2 2"/><path d="M2.5 13 5 7c.7-1.3 1.4-2 3-2"/><path d="M21.5 13 19 7c-.7-1.3-1.5-2-3-2"/>',
   lc_cap: '<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>',
@@ -144,7 +146,7 @@ function chName(t) { for (var i = 0; i < CHARS.length; i++) if (CHARS[i].id === 
 var KEY = 'ai-room-quiz-v2', saveOK = true;
 var DEV = /[?&]dev=1(?:&|$)/.test(location.search);
 
-function fresh() { return { v: 2, started: false, nick: { a: 0, n: 0 }, char: { type: 'robot', color: 0 }, rooms: {}, topics: {}, prog: {}, equip: { hat: null, face: null, hand: null, lhand: null }, titleId: 0, reduce: false }; }
+function fresh() { return { v: 2, started: false, nick: { a: 0, n: 0 }, char: { type: 'robot', color: 0 }, rooms: {}, topics: {}, prog: {}, equip: { hat: null, face: null, hand: null, lhand: null }, titleId: 0, reduce: false, sfx: true, bgm: true }; }
 
 function load() {
   try { var s = localStorage.getItem(KEY); if (s) { var o = JSON.parse(s); if (o && o.v === 2) return o; } } catch (e) { saveOK = false; }
@@ -156,6 +158,9 @@ function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e
 var S = load() || fresh();
 
 if (!S.prog) S.prog = {};
+
+if (S.sfx === undefined) S.sfx = true;
+if (S.bgm === undefined) S.bgm = true;
 
 for (var rk in S.rooms) (S.rooms[rk].weak || []).forEach(function (w) { w.ref = String(w.ref).replace(/PDF /g, '개념서 ').replace(/\s*§\d+/g, ''); });
 

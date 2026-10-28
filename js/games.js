@@ -146,7 +146,7 @@ function machProg(i) { var g = G.room.games[i], n = gcount(g), d = 0; for (var k
 function sLab() {
   var rem = remaining(), total = G.room.games.length, boot = G.boot, booted = boot !== null && boot !== undefined; G.boot = null;
   var say = booted ? (rem === 0 ? '연구소 복구 완료! 불이 모두 켜졌어요.' : G.room.games[boot].mname + ' 가동! 연구소가 밝아졌어요.') : (rem === total ? '기계를 눌러서 고치러 가요!' : '고장난 기계가 ' + rem + '대 남았어요. 기계 쪽으로 가 보세요!');
-  var h = '<div class="top"><button class="btn small" data-a="lobby">' + ico('left') + '로비</button><button class="btn small" data-a="listen">' + ico('lc_headset') + '방송 듣기</button></div>' +
+  var h = '<div class="top"><button class="btn small" data-a="lobby">' + ico('left') + '로비</button>' + sndBtn() + '<button class="btn small" data-a="listen">' + ico('lc_headset') + '방송 듣기</button></div>' +
     '<section class="stack"><div class="ghud"><div class="av' + (booted ? ' jump' : '') + '">' + me() + '</div><div class="bubble" data-focus role="status">' + say + '</div></div><div>' + gaugeBlock() + '</div></section>' +
     '<div class="plate' + (rem === 0 ? ' on' : '') + '" role="status"><span>' + G.room.lab + '</span><b>' + (rem === 0 ? '가동 중' : '점검 중') + '</b></div>' +
     '<div class="lab" id="lab" style="--dim:' + (0.26 * rem / total).toFixed(2) + '"><div class="wall" aria-hidden="true"></div>';
@@ -180,7 +180,7 @@ function labStep(dc, dr) {
   stopWalk();
   var c = G.pc + dc, r = G.pr + dr, m = mAt(c, r);
   if (m >= 0) { openMachine(m); return; }
-  if (labFree(c, r)) { G.pc = c; G.pr = r; placeLab(); }
+  if (labFree(c, r)) { G.pc = c; G.pr = r; placeLab(); SND.step(); }
 }
 
 function labPath(i) {
@@ -201,7 +201,7 @@ function walkTo(i) {
   if (!p || !p.length) { openMachine(i); return; }
   var k = 0;
   G.walk = setInterval(function () {
-    var s = p[k++]; G.pc = s[0]; G.pr = s[1]; placeLab();
+    var s = p[k++]; G.pc = s[0]; G.pr = s[1]; placeLab(); SND.step();
     if (k >= p.length) { clearInterval(G.walk); G.walk = null; G.walkT = setTimeout(function () { if (G && UI.screen === 'lab') openMachine(i); }, 170); }
   }, 130);
 }
@@ -209,7 +209,7 @@ function walkTo(i) {
 function sGame() {
   var g = game(), rc = (G.react && G.react.fresh) ? (G.react.kind === 'bad' ? ' wobble' : ' jump') : '';
   if (G.react) G.react.fresh = false;
-  var h = '<div class="top"><button class="btn small" data-a="' + (G.room.noLab ? 'lobby' : 'tolab') + '">' + ico('left') + (G.room.noLab ? '로비' : '연구소') + '</button><button class="btn small" data-a="listen">' + ico('lc_headset') + '방송 듣기</button></div>' +
+  var h = '<div class="top"><button class="btn small" data-a="' + (G.room.noLab ? 'lobby' : 'tolab') + '">' + ico('left') + (G.room.noLab ? '로비' : '연구소') + '</button>' + sndBtn() + '<button class="btn small" data-a="listen">' + ico('lc_headset') + '방송 듣기</button></div>' +
     '<section class="stack"><div class="ghud"><div class="av' + rc + '">' + me() + '</div><div class="bubble" role="status">' + G.bub + '</div></div><div>' + gaugeBlock() + '</div></section>';
   if (g.kind === 'assign') h += gAssign(g); else if (g.kind === 'order') h += gOrder(g); else h += gChoice(g);
   if (gameDone(G.gi)) {

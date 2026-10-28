@@ -6,6 +6,18 @@ function hud() {
     '<button class="btn small" data-a="listen">' + ico('lc_headset') + '방송 듣기</button></header>';
 }
 
+/* 소리 빠른 스위치(아이콘 하나): 효과음·배경음악 중 하나라도 켜져 있으면 둘 다 끄고, 둘 다 꺼져 있으면 둘 다 켠다 */
+function sndBtn() {
+  var on = S.sfx || S.bgm;
+  return '<button class="btn small icon" data-a="snd" aria-label="소리 ' + (on ? '끄기' : '켜기') + '">' + ico(on ? 'vol' : 'mute') + '</button>';
+}
+
+/* 효과음·배경음악을 따로 켜고 끄는 두 버튼(로비와 내 카드) */
+function sndRow() {
+  function b(a, label, on) { return '<button class="btn small tgl' + (on ? ' on' : '') + '" data-a="' + a + '" aria-pressed="' + on + '">' + ico(on ? 'vol' : 'mute') + label + ': ' + (on ? '켜짐' : '꺼짐') + '</button>'; }
+  return '<div class="row sndrow">' + b('sfx', '효과음', S.sfx) + b('bgm', '배경음악', S.bgm) + '</div>';
+}
+
 function tabs() {
   var T = [['lobby', 'home', '방'], ['dex', 'cards', '도감'], ['me', 'user', '내 카드']], h = '<nav class="tabs" aria-label="메뉴">';
   T.forEach(function (t) { h += '<button class="tab' + (UI.tab === t[0] ? ' on' : '') + '" data-a="tab" data-v="' + t[0] + '">' + ico(t[1]) + t[2] + '</button>'; });
@@ -46,7 +58,7 @@ function sListen() {
 function sLobby() {
   var done = clearedCount(), h = '<section class="banner"><h1 data-focus>활동 고르기</h1><p>방송에서 알려 주는 방으로 입장하세요</p></section><div class="pips" aria-label="복구한 방 ' + done + '개">';
   for (var i = 1; i <= 5; i++) h += '<i class="' + (cleared(i) ? 'on' : '') + '"></i>';
-  h += '</div><div class="stack">';
+  h += '</div>' + sndRow() + '<div class="stack">';
   ROOMS.forEach(function (r) {
     if (r.id > 5) return;
     var st = cleared(r.id) ? '<span class="st">' + ico('check') + '복구 완료</span>' : (r.ready !== false ? '<span class="st">' + (S.prog[r.id] ? '이어 하기' : '입장') + '</span>' : '<span class="st">준비 중</span>');
@@ -62,7 +74,7 @@ function sLobby() {
 }
 
 function sMission() {
-  var r = room(UI.roomId), h = '<div class="top"><button class="btn small" data-a="lobby">' + ico('left') + '로비</button></div>' +
+  var r = room(UI.roomId), h = '<div class="top"><button class="btn small" data-a="lobby">' + ico('left') + '로비</button>' + sndBtn() + '</div>' +
     '<section class="panel stack"><div class="row" style="flex-wrap:wrap"><span class="ribbon">방 ' + r.id + ' · ' + r.title + '</span><span class="ref">' + r.refs + '</span></div>' +
     '<div class="ghud"><div class="av">' + me() + '</div><div class="bubble" data-focus>' + r.mission + '</div></div>' +
     '<h3>오늘의 핵심</h3><ul class="defs">';
@@ -126,7 +138,7 @@ function sMe() {
     h += '<button class="gear' + (on ? ' on' : '') + (has ? '' : ' lock') + '" data-a="equip" data-v="' + it.id + '" aria-pressed="' + on + '">' + ico(has ? it.ic : 'lock') + (has ? it.n : '방 ' + it.room) + '</button>';
   });
   h += '</div><p class="note">모자는 한 번에 하나만 쓸 수 있어요.</p></section>';
-  h += '<section class="panel stack"><h3>설정</h3><button class="btn small" data-a="reduce" aria-pressed="' + S.reduce + '">움직임 줄이기: ' + (S.reduce ? '켜짐' : '꺼짐') + '</button><button class="btn small" data-a="newgame">캐릭터 다시 만들기</button></section>';
+  h += '<section class="panel stack"><h3>설정</h3>' + sndRow() + '<p class="note">소리가 안 나면 폰의 무음 모드와 볼륨을 확인해요. 방송 듣기 화면에서는 항상 조용해요.</p><button class="btn small" data-a="reduce" aria-pressed="' + S.reduce + '">움직임 줄이기: ' + (S.reduce ? '켜짐' : '꺼짐') + '</button><button class="btn small" data-a="newgame">캐릭터 다시 만들기</button></section>';
   if (DEV) h += '<details open><summary>교사용 점검 도구</summary><div class="stack"><button class="btn small" data-a="devclear">방 1~5 모두 복구 처리</button><button class="btn small" data-a="devreset">저장 지우고 처음부터</button></div></details>';
   return h;
 }

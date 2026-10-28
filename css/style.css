@@ -11,12 +11,11 @@ img{max-width:100%}
   --font-display:"A2Z Display","A2Z","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
   --font-body:"A2Z","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;
 }
-/* 에이투지체(SIL OFL 1.1) — 앱에서 쓰는 글자만 남긴 woff2. 제목·버튼용 "A2Z Display"는 Black을 weight 400으로 걸어 둔 이름 */
+/* 에이투지체(SIL OFL 1.1) — 앱에서 쓰는 글자만 남긴 woff2. 제목·버튼용 "A2Z Display"는 Bold를 weight 400으로 걸어 둔 이름(같은 파일이라 한 번만 받는다) */
 @font-face{font-family:"A2Z"; font-weight:400; font-display:swap; src:url(../fonts/a2z-400.woff2) format("woff2")}
 @font-face{font-family:"A2Z"; font-weight:500; font-display:swap; src:url(../fonts/a2z-500.woff2) format("woff2")}
 @font-face{font-family:"A2Z"; font-weight:700; font-display:swap; src:url(../fonts/a2z-700.woff2) format("woff2")}
-@font-face{font-family:"A2Z"; font-weight:900; font-display:swap; src:url(../fonts/a2z-900.woff2) format("woff2")}
-@font-face{font-family:"A2Z Display"; font-weight:400; font-display:swap; src:url(../fonts/a2z-900.woff2) format("woff2")}
+@font-face{font-family:"A2Z Display"; font-weight:400; font-display:swap; src:url(../fonts/a2z-700.woff2) format("woff2")}
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#171B45; --bg2:#20256B; --panel:#272D6E; --panel2:#323A8C;
@@ -112,6 +111,10 @@ p{margin:0}
 .room.done .st{background:var(--leaf); color:var(--leaf-ink)}
 
 .top{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.btn.small.icon{width:48px; padding:6px 0; flex:none}
+.sndrow{flex-wrap:wrap; gap:10px}
+.sndrow .btn{flex:1 1 130px}
+.btn.tgl.on{background:var(--leaf); color:var(--leaf-ink)}
 .big{display:flex; flex-direction:column; gap:18px}
 .big h2{font-size:24px}
 .big p{font-size:17px; line-height:1.75}
@@ -276,7 +279,7 @@ details[open] summary{margin-bottom:8px}
 .slot.pulse{animation:flash .6s ease-out}
 .badges{grid-template-columns:repeat(6,minmax(0,1fr))}
 @media (max-width:349px){.bins.n3{grid-template-columns:minmax(0,1fr); gap:12px} .bins.n3 .bin{font-size:18px} .badges{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .hud .btn.small{font-size:15px; padding:6px 10px; gap:6px} .who b{white-space:normal; line-height:1.15}
+  .hud .btn.small, .top .btn.small{font-size:15px; padding:6px 10px; gap:6px} .top .btn.small.icon{width:44px; padding:6px 0} .who b{white-space:normal; line-height:1.15}
   .room{flex-wrap:wrap; gap:10px 12px; padding:14px} .room .tx{flex:1 1 150px} .room .st{margin-left:58px}}
 /* 정답(초록 동그라미)·오답(빨간 X) 효과: 화면 전체를 흐리게 하고 가운데에 크게 보였다가 사라진다. 손가락 입력은 막지 않는다. */
 #fx{position:fixed; inset:0; z-index:100; display:grid; place-items:center; pointer-events:none; opacity:0; visibility:hidden; transition:opacity .25s, visibility 0s .25s}
