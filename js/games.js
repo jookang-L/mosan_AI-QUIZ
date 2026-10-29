@@ -27,9 +27,19 @@ function prepGame() {
   else for (var i = 0; i < g.items.length; i++) if (G.stage[G.gi + '.' + i] === 'fix') { G.sel = i; G.bub = pickOne(SAY.found); break; }
 }
 
+/* 복구를 끝낸 방은 다시 들어가도 처음부터가 아니라 끝낸 기록(정상·수리) 그대로 보여 준다.
+ * 기록(st)이 없는 예전 저장은 "다시 볼 개념" 목록으로 정상·수리를 짐작해서 채운다. */
+function clearedStates(r) {
+  var info = S.rooms[r.id], st = {}, weak = {};
+  if (info.st) { for (var k in info.st) st[k] = info.st[k]; return st; }
+  (info.weak || []).forEach(function (w) { weak[w.topic] = 1; });
+  r.games.forEach(function (g, gi) { (g.kind === 'choice' ? [g] : g.items).forEach(function (x, i) { st[gi + '.' + i] = weak[x.topic] ? 'fixed' : 'ok'; }); });
+  return st;
+}
+
 function startGame(r) {
-  var p = S.prog[r.id] || {};
-  G = { room: r, gi: 0, st: p.st || {}, picks: p.picks || {}, stage: p.stage || {}, miss: p.miss || {}, fixWrong: p.fixWrong || {}, fixOrder: {}, ord: {}, mpos: mposFor(r.games.length), badTap: null, boot: null, popKey: null, pulseKey: null, sel: -1, react: null, bub: '', pc: 3, pr: 4, walk: null, walkT: null };
+  var p = S.prog[r.id] || {}, done = cleared(r.id) ? clearedStates(r) : null;
+  G = { room: r, gi: 0, st: done || p.st || {}, picks: p.picks || {}, stage: p.stage || {}, miss: p.miss || {}, fixWrong: p.fixWrong || {}, fixOrder: {}, ord: {}, mpos: mposFor(r.games.length), badTap: null, boot: null, popKey: null, pulseKey: null, sel: -1, react: null, bub: '', pc: 3, pr: 4, walk: null, walkT: null };
   if (r.noLab) { G.gi = 0; prepGame(); go('game'); } else go('lab');
 }
 
@@ -74,16 +84,19 @@ function cmpHTML(f) {
 }
 
 function finishRoom() {
-  var id = G.room.id, ok = 0, fx = 0, weak = [], seen = {}, it = itemFor(id);
-  allKeys().forEach(function (k) {
-    if (G.st[k] === 'ok') ok++;
-    else { fx++; var x = itemOf(k); if (!seen[x.topic]) { seen[x.topic] = 1; weak.push({ topic: x.topic, ref: x.ref }); } }
-  });
-  S.rooms[id] = { cleared: true, ok: ok, fixed: fx, weak: weak };
-  recordConcepts();
-  S.titleId = id;
-  if (it) S.equip[it.slot] = it.id;
-  delete S.prog[id];
+  var id = G.room.id, ok = 0, fx = 0, weak = [], seen = {}, it = itemFor(id), again = cleared(id);
+  if (!again) {   // 처음 복구할 때만 기록·칭호·아이템을 정한다(다시 들어가서 결과를 보는 것은 아무것도 바꾸지 않는다)
+    allKeys().forEach(function (k) {
+      if (G.st[k] === 'ok') ok++;
+      else { fx++; var x = itemOf(k); if (!seen[x.topic]) { seen[x.topic] = 1; weak.push({ topic: x.topic, ref: x.ref }); } }
+    });
+    var st = {}; for (var sk in G.st) st[sk] = G.st[sk];
+    S.rooms[id] = { cleared: true, ok: ok, fixed: fx, weak: weak, st: st };
+    recordConcepts();
+    S.titleId = id;
+    if (it) S.equip[it.slot] = it.id;
+    delete S.prog[id];
+  }
   save(); NET.flush(); UI.roomId = id; UI.back = null; UI.keys = allKeys().map(function (k) { return G.st[k]; }); dropG(); go('clear');
 }
 

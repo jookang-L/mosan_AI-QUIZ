@@ -10,16 +10,16 @@ function hud() {
 function clsPicker() {
   var lock = S.clsLock ? ' disabled' : '', h = '<div class="stack clsbox"><h3>우리 반</h3><div class="clsgrid" role="group" aria-label="우리 반 번호">', i;
   for (i = 1; i <= CLS_N; i++) h += '<button class="chip clsb' + (S.cls === i ? ' on' : '') + '" data-a="cls" data-v="' + i + '" aria-pressed="' + (S.cls === i) + '"' + lock + '>' + i + '</button>';
-  h += '</div><button class="chip clsb practice' + (S.cls === 0 ? ' on' : '') + '" data-a="cls" data-v="0" aria-pressed="' + (S.cls === 0) + '"' + lock + '>점수 없이 연습만 할래요</button>';
+  h += '</div>';
   if (UI.needCls) h += '<p class="warn" role="alert">먼저 우리 반을 골라 주세요</p>';
   else if (S.clsLock) h += '<p class="note">점수가 이미 들어가서 반을 바꿀 수 없어요. 잘못 골랐다면 선생님께 말씀드려요.</p>';
-  else h += '<p class="note">' + (S.cls > 0 ? '2학년 ' + S.cls + '반 점수로 들어가요. 반별 순위는 방송실 화면에서만 볼 수 있어요.' : S.cls === 0 ? '점수는 쌓이지 않고 연습만 해요.' : '문제를 풀 때마다 우리 반 점수가 올라가요. 한 번에 맞히면 +10, 틀리면 −2, 고치면 +6!') + '</p>';
+  else h += '<p class="note">' + (S.cls > 0 ? '2학년 ' + S.cls + '반 점수로 들어가요. 반별 순위는 방송실 화면에서만 볼 수 있어요.' : '문제를 풀 때마다 우리 반 점수가 올라가요. 한 번에 맞히면 +10, 틀리면 −2, 고치면 +6!') + '</p>';
   return h + '</div>';
 }
 
 /* 내 카드: 내가 우리 반에 보탠 점수와 전송 상태 */
 function scoreLine() {
-  if (!(S.cls > 0)) return S.cls === 0 ? '<p class="note">점수 없이 연습하는 중이에요.</p>' : '';
+  if (!(S.cls > 0)) return '';
   var n = NET.info(), t = n.at ? new Date(n.at) : null, hh = t ? ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2) : '';
   var msg = n.state === 'off' ? '시험용 주소라서 점수가 서버로 가지 않아요' : n.state === 'ok' ? '점수 전송 완료' + (hh ? ' (' + hh + ')' : '') : n.state === 'full' ? '이 반은 접속 기기가 가득 찼어요. 선생님께 알려 주세요' : '점수 전송 대기 중 · 인터넷이 되면 자동으로 올라가요';
   return '<p class="note">2학년 ' + S.cls + '반 · 내가 보탠 점수 ' + Score.total() + '점<br>' + msg + '</p>';

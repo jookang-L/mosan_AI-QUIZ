@@ -5,7 +5,7 @@
 
 (function () {
   var cfg = window.AIQ_NET, C = window.AIQ_CONTENT || { rooms: {}, final: null }, root = document.getElementById('root');
-  var DEMO = /[?&]demo=1(?:&|$)/.test(location.search), POLL = DEMO ? 3000 : 10000;
+  var DEMO = /[?&]demo=1(?:&|$)/.test(location.search), POLL = DEMO ? 3000 : 5000;
 
   function jget(k, d) { try { var s = localStorage.getItem(k); if (s) { var o = JSON.parse(s), r = {}, i; for (i in d) r[i] = (o && o[i] !== undefined) ? o[i] : d[i]; return r; } } catch (e) {} return d; }
   function jset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
@@ -15,7 +15,10 @@
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function strip(s) { return String(s || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(); }
 
+  /* 반 점수 = 그 반 학생들이 받은 점수의 합(나누지 않는다) */
   var RULE = jget('aiq-admin-rule', { a: 10, b: 2, c: 6, fm: 2 });
+  function fmt(v) { return Math.round(v).toLocaleString('ko-KR'); }
+  function subtitle() { return '반 점수 = 학생들이 받은 점수의 합'; }
   var VIEW = jget('aiq-admin-view', { hide: false });
   var busy = false, gen = 0, sess = null, board = null, frozen = false, lastOk = 0, err = '', prevRank = null, toastT = null, upT = {}, rh = 40, built = 0, timer = null, demo = null;
   try { sess = JSON.parse(sessionStorage.getItem('aiq-admin-sess')); } catch (e) {}
@@ -78,7 +81,7 @@
   function pts(c) { return (c.o1 * RULE.a + c.f1 * RULE.c - c.w1 * RULE.b) + RULE.fm * (c.o2 * RULE.a + c.f2 * RULE.c - c.w2 * RULE.b); }
 
   function ranked(b) {
-    var rows = b.classes.map(function (c) { return { c: c, per: pts(c) / Math.max(1, c.headcount) }; }), order = rows.slice(), rank = {}, prev = null, rk = 0;
+    var rows = b.classes.map(function (c) { return { c: c, per: pts(c) }; }), order = rows.slice(), rank = {}, prev = null, rk = 0;
     order.sort(function (x, y) { return y.per - x.per || x.c.cls - y.c.cls; });
     order.forEach(function (x, i) { if (prev === null || Math.abs(x.per - prev) > 1e-9) rk = i + 1; rank[x.c.cls] = rk; prev = x.per; });
     var ties = {}; order.forEach(function (x) { ties[rank[x.c.cls]] = (ties[rank[x.c.cls]] || 0) + 1; });
@@ -92,11 +95,11 @@
       var h = (i * 47) % 360;
       rows += '<div class="row" id="r' + i + '" data-c="' + i + '"><div class="rank"></div><div class="cls">' + i + '반</div><div class="track"><div class="fill" style="background:linear-gradient(90deg,hsl(' + h + ' 70% 46%),hsl(' + h + ' 85% 62%))"></div></div><div class="val"><b></b><span></span></div></div>';
     }
-    root.innerHTML = '<div class="wrap" id="wrap"><header class="top"><h1>AI 골든벨 반 대항전</h1><span class="sub">' + (DEMO ? '데모 화면 · 가짜 점수예요' : '1인당 평균 점수 · 총점 ÷ 반 인원') + '</span><span class="sp"></span>' +
+    root.innerHTML = '<div class="wrap" id="wrap"><header class="top"><h1>AI 골든벨 반 대항전</h1><span class="sub" id="sub"></span><span class="sp"></span>' +
       '<span class="stat" id="st"><i></i><span id="stx">연결 중…</span></span>' +
       '<div class="tools"><button class="btn ghost" id="b-hide"></button><button class="btn ghost" id="b-frz"></button><button class="btn ghost" id="b-ana">분석</button><button class="btn ghost" id="b-set">설정</button><button class="btn ghost" id="b-full">전체화면</button></div></header>' +
       '<main class="board" id="board">' + rows + '<div class="cover" id="cover" hidden><div>점수는 비공개예요<small>공개하면 순위가 짠! 하고 자리를 잡아요</small></div></div></main>' +
-      '<footer class="foot">H 점수 숨김·공개 · F 화면 고정 · 학생이 문제를 풀 때마다 약 10초 간격으로 갱신돼요</footer></div><div class="toast" id="toast"></div><div id="modal"></div>';
+      '<footer class="foot">H 점수 숨김·공개 · F 화면 고정 · 학생이 문제를 풀면 몇 초 안에 순위판에 반영돼요</footer></div><div class="toast" id="toast"></div><div id="modal"></div>';
     built = n;
     $('b-hide').onclick = toggleHide; $('b-frz').onclick = toggleFreeze; $('b-ana').onclick = openAnalysis; $('b-set').onclick = openSettings;
     $('b-full').onclick = function () { var d = document.documentElement; if (document.fullscreenElement) document.exitFullscreen(); else if (d.requestFullscreen) d.requestFullscreen(); };
@@ -117,7 +120,8 @@
 
   function paint() {
     if (!board || !built) return;
-    var rk = ranked(board), leader = rk.order.length ? Math.max(rk.order[0].per, 0) : 0, scale = Math.max(80, leader);
+    var rk = ranked(board), leader = rk.order.length ? Math.max(rk.order[0].per, 0) : 0, scale = Math.max(500, leader);
+    $('sub').textContent = (DEMO ? '데모 · 가짜 점수 · ' : '') + subtitle();
     rk.order.forEach(function (x, idx) {
       var c = x.c, el = $('r' + c.cls); if (!el) return;
       var pos = VIEW.hide ? c.cls - 1 : idx, r = rk.rank[c.cls], tie = rk.ties[r] > 1;
@@ -125,7 +129,7 @@
       el.classList.toggle('first', !VIEW.hide && r === 1 && x.per > 0);
       el.querySelector('.rank').innerHTML = VIEW.hide ? '' : (tie ? '<small>공동</small>' : '') + r;
       el.querySelector('.fill').style.width = (!VIEW.hide && x.per > 0) ? Math.max(1.5, Math.min(100, x.per / scale * 100)) + '%' : '0%';
-      el.querySelector('.val b').textContent = VIEW.hide ? '?' : x.per.toFixed(1);
+      el.querySelector('.val b').textContent = VIEW.hide ? '?' : fmt(x.per);
       var over = c.devices > c.headcount;
       el.querySelector('.val span').innerHTML = (over ? '⚠ ' : '') + c.devices + '/' + c.headcount + '명';
       el.querySelector('.val span').className = over ? 'over' : '';
@@ -178,7 +182,7 @@
   function closeModal() { $('modal').innerHTML = ''; }
 
   function openSettings() {
-    var cl = board ? board.classes : [], h = '<div class="modal"><div class="sheet" role="dialog" aria-label="설정"><h2>설정</h2><h3>반별 인원</h3><p>순위는 총점을 이 인원으로 나눠요. 접속하지 않은 학생은 0점으로 계산돼요. 접속 기기가 인원보다 많으면 순위판에 ⚠가 떠요.</p><div class="grid">';
+    var cl = board ? board.classes : [], h = '<div class="modal"><div class="sheet" role="dialog" aria-label="설정"><h2>설정</h2><h3>반별 인원</h3><p>순위에는 쓰이지 않아요(반 점수는 학생들이 받은 점수의 합이에요). 반별 "접속 n/인원명" 표시와, 가짜 기기를 막는 상한(인원의 1.5배+3대)에 쓰여요. 접속 기기가 인원보다 많으면 순위판에 ⚠가 떠요.</p><div class="grid">';
     cl.forEach(function (c) { h += '<label>' + c.cls + '반 <input type="number" min="1" max="100" data-hc="' + c.cls + '" value="' + c.headcount + '"></label>'; });
     h += '</div><h3>점수 규칙</h3><p>화면 계산에만 쓰이는 값이라 언제든 바꿀 수 있어요. 바꾸면 지금까지의 점수도 새 규칙으로 다시 계산돼요.</p><div class="rule">' +
       '<label>한 번에 정답 +<input data-r="a" type="number" value="' + RULE.a + '"></label><label>틀릴 때마다 −<input data-r="b" type="number" value="' + RULE.b + '"></label>' +

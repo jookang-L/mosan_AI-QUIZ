@@ -74,7 +74,7 @@ function act(a, el) {
     case 'enter':
       if (S.cls === null) { UI.needCls = true; render(); break; }
       S.started = true; save(); NET.flush(true); UI.back = null; go('listen'); break;
-    case 'cls': if (S.clsLock) break; S.cls = +v; UI.needCls = false; save(); NET.flush(true); render(); break;
+    case 'cls': if (S.clsLock || !(+v > 0)) break; S.cls = +v; UI.needCls = false; save(); NET.flush(true); render(); break;
     case 'listen': NET.flush(); UI.back = (UI.screen === 'listen' || UI.screen === 'clear') ? null : UI.screen; go('listen'); break;
     case 'resumeact':
       if (UI.back && (G || UI.back === 'main' || UI.back === 'mission')) { var b = UI.back; UI.back = null; go(b); } else { UI.back = null; UI.tab = 'lobby'; go('main'); }

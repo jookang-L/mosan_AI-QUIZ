@@ -163,7 +163,7 @@ if (S.sfx === undefined) S.sfx = true;
 if (S.bgm === undefined) S.bgm = true;
 
 /* 반 대항: cls = null(아직 안 고름) | 0(점수 없이 연습) | 1~반 개수. score = 점수 장부(score.js) */
-if (S.cls === undefined) S.cls = null;
+if (S.cls === undefined || S.cls === 0) S.cls = null;   // "점수 없이 연습"은 없어졌어요. 예전에 고른 학생은 반을 다시 고른다
 if (!S.score) S.score = {};
 if (S.did === undefined) S.did = null;
 if (S.regCls === undefined) S.regCls = null;

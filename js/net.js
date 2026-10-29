@@ -1,6 +1,6 @@
 /* net.js — 점수 장부를 반 대항 서버(Supabase)로 올린다.
  * 원칙: 서버가 막히거나 느려도 게임은 멈추지 않는다. 장부는 폰에 남아 있다가 연결되면 올라간다.
- * 올리는 때: 기계 하나를 끝냈을 때, 방송 듣기로 갈 때, 화면을 떠날 때, 반을 고른 때, 그리고 90초 안전 타이머.
+ * 올리는 때: 답을 하고 3초 뒤(그 사이 답은 묶어서 한 번에), 기계 하나를 끝냈을 때, 방송 듣기로 갈 때, 화면을 떠날 때, 반을 고른 때.
  * 한 번에 하나만 올리고(직렬), 실패하면 간격을 늘려 다시 시도한다. */
 'use strict';
 
@@ -25,7 +25,7 @@ var NET = (function () {
 
   function mark() {
     ver++; dirty = true;
-    if (!timer) timer = setTimeout(function () { timer = null; flush(); }, 90000);
+    if (!timer) timer = setTimeout(function () { timer = null; flush(); }, 3000);   // 답을 하고 3초 안에 올라간다(그 사이 답은 한 번에 묶는다)
   }
 
   function later(sec) { clearTimeout(retryT); retryT = setTimeout(function () { flush(true); }, sec * 1000 + Math.random() * 1500); }
