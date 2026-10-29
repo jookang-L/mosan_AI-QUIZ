@@ -146,7 +146,7 @@ function chName(t) { for (var i = 0; i < CHARS.length; i++) if (CHARS[i].id === 
 var KEY = 'ai-room-quiz-v2', saveOK = true;
 var DEV = /[?&]dev=1(?:&|$)/.test(location.search);
 
-function fresh() { return { v: 2, started: false, nick: { a: 0, n: 0 }, char: { type: 'robot', color: 0 }, rooms: {}, topics: {}, prog: {}, equip: { hat: null, face: null, hand: null, lhand: null }, titleId: 0, reduce: false, sfx: true, bgm: true }; }
+function fresh() { return { v: 2, started: false, nick: { a: 0, n: 0 }, char: { type: 'robot', color: 0 }, rooms: {}, topics: {}, prog: {}, equip: { hat: null, face: null, hand: null, lhand: null }, titleId: 0, reduce: false, sfx: true, bgm: true, cls: null, score: {}, did: null, clsLock: false, regCls: null }; }
 
 function load() {
   try { var s = localStorage.getItem(KEY); if (s) { var o = JSON.parse(s); if (o && o.v === 2) return o; } } catch (e) { saveOK = false; }
@@ -161,6 +161,13 @@ if (!S.prog) S.prog = {};
 
 if (S.sfx === undefined) S.sfx = true;
 if (S.bgm === undefined) S.bgm = true;
+
+/* 반 대항: cls = null(아직 안 고름) | 0(점수 없이 연습) | 1~반 개수. score = 점수 장부(score.js) */
+if (S.cls === undefined) S.cls = null;
+if (!S.score) S.score = {};
+if (S.did === undefined) S.did = null;
+if (S.regCls === undefined) S.regCls = null;
+var CLS_N = (window.AIQ_NET && AIQ_NET.classes) || 15;
 
 for (var rk in S.rooms) (S.rooms[rk].weak || []).forEach(function (w) { w.ref = String(w.ref).replace(/PDF /g, '개념서 ').replace(/\s*§\d+/g, ''); });
 

@@ -35,28 +35,32 @@ function startGame(r) {
 
 function openMachine(i) { stopWalk(); G.gi = i; prepGame(); go('game'); }
 
-function react(kind) { G.bub = pickOne(SAY[kind]); G.react = { kind: kind, fresh: true }; }
+/* pts = 이번 판정으로 반에 더해진 점수(+10, -2 …). 점수를 받는 반을 고른 학생에게만 보여 준다. */
+function react(kind, pts) { G.bub = pickOne(SAY[kind]); G.react = { kind: kind, fresh: true, pts: S.cls > 0 ? (pts || 0) : 0 }; }
 
 function completeItem(i) {
   var k = key(i), was = gameDone(G.gi);
   G.st[k] = G.miss[k] ? 'fixed' : 'ok'; delete G.stage[k];
-  G.popKey = k; G.pulseKey = k; react(G.st[k]); G.sel = -1;
-  if (!was && gameDone(G.gi)) G.boot = G.gi;
+  G.popKey = k; G.pulseKey = k; react(G.st[k], Score.settle(k)); G.sel = -1;
+  if (!was && gameDone(G.gi)) { G.boot = G.gi; NET.flush(); }
 }
+
+/* 틀린 보기를 화면에 표시하려고 기록만 한다. 같은 오답을 또 눌러도 감점은 누를 때마다 들어간다(Score.wrong) */
+function notePick(list, v) { if (list.indexOf(v) < 0) list.push(v); }
 
 function gradeAssign(i, ok) {
   var it = game().items[i], k = key(i);
   if (ok) {
-    if (it.fix) { G.stage[k] = 'fix'; G.bub = pickOne(SAY.found); G.react = { kind: 'ok', fresh: true }; }
+    if (it.fix) { G.stage[k] = 'fix'; G.bub = pickOne(SAY.found); G.react = { kind: 'ok', fresh: true, pts: 0 }; }
     else completeItem(i);
-  } else { G.st[k] = 'broken'; G.miss[k] = true; react('bad'); G.sel = -1; }
+  } else { G.st[k] = 'broken'; G.miss[k] = true; react('bad', Score.wrong(k)); G.sel = -1; }
   saveProg();
 }
 
 function gradeFix(i, oi) {
   var it = game().items[i], k = key(i);
   if (it.fix.options[oi].ok) completeItem(i);
-  else { G.st[k] = 'broken'; G.miss[k] = true; (G.fixWrong[k] = G.fixWrong[k] || []).push(oi); react('bad'); }
+  else { G.st[k] = 'broken'; G.miss[k] = true; notePick(G.fixWrong[k] = G.fixWrong[k] || [], oi); react('bad', Score.wrong(k)); }
   saveProg();
 }
 
@@ -80,7 +84,7 @@ function finishRoom() {
   S.titleId = id;
   if (it) S.equip[it.slot] = it.id;
   delete S.prog[id];
-  save(); UI.roomId = id; UI.back = null; UI.keys = allKeys().map(function (k) { return G.st[k]; }); dropG(); go('clear');
+  save(); NET.flush(); UI.roomId = id; UI.back = null; UI.keys = allKeys().map(function (k) { return G.st[k]; }); dropG(); go('clear');
 }
 
 /* 개념 확인 기록: S.topics[개념] = 'ok'(바로 맞힘) | 'fixed'(해설을 읽고 고침). 다시 도전하거나 종합 도전에서 만나면 최신 결과로 바뀐다. */
@@ -273,7 +277,7 @@ function tapOrder(idx) {
   var nxt = orderNext(G.gi), k = key(idx);
   if (isDone(G.st[k]) || nxt >= game().items.length) return;
   if (idx === nxt) { G.badTap = null; completeItem(idx); }
-  else { var ek = key(nxt); G.st[ek] = 'broken'; G.miss[ek] = true; G.badTap = idx; react('bad'); }
+  else { var ek = key(nxt); G.st[ek] = 'broken'; G.miss[ek] = true; G.badTap = idx; react('bad', Score.wrong(ek)); }
   saveProg();
 }
 

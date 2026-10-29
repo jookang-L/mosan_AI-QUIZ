@@ -6,6 +6,25 @@ function hud() {
     '<button class="btn small" data-a="listen">' + ico('lc_headset') + '방송 듣기</button></header>';
 }
 
+/* 우리 반 고르기: 캐릭터 만들기 화면과, 반을 아직 안 고른 예전 저장의 로비에 나온다 */
+function clsPicker() {
+  var lock = S.clsLock ? ' disabled' : '', h = '<div class="stack clsbox"><h3>우리 반</h3><div class="clsgrid" role="group" aria-label="우리 반 번호">', i;
+  for (i = 1; i <= CLS_N; i++) h += '<button class="chip clsb' + (S.cls === i ? ' on' : '') + '" data-a="cls" data-v="' + i + '" aria-pressed="' + (S.cls === i) + '"' + lock + '>' + i + '</button>';
+  h += '</div><button class="chip clsb practice' + (S.cls === 0 ? ' on' : '') + '" data-a="cls" data-v="0" aria-pressed="' + (S.cls === 0) + '"' + lock + '>점수 없이 연습만 할래요</button>';
+  if (UI.needCls) h += '<p class="warn" role="alert">먼저 우리 반을 골라 주세요</p>';
+  else if (S.clsLock) h += '<p class="note">점수가 이미 들어가서 반을 바꿀 수 없어요. 잘못 골랐다면 선생님께 말씀드려요.</p>';
+  else h += '<p class="note">' + (S.cls > 0 ? '2학년 ' + S.cls + '반 점수로 들어가요. 반별 순위는 방송실 화면에서만 볼 수 있어요.' : S.cls === 0 ? '점수는 쌓이지 않고 연습만 해요.' : '문제를 풀 때마다 우리 반 점수가 올라가요. 한 번에 맞히면 +10, 틀리면 −2, 고치면 +6!') + '</p>';
+  return h + '</div>';
+}
+
+/* 내 카드: 내가 우리 반에 보탠 점수와 전송 상태 */
+function scoreLine() {
+  if (!(S.cls > 0)) return S.cls === 0 ? '<p class="note">점수 없이 연습하는 중이에요.</p>' : '';
+  var n = NET.info(), t = n.at ? new Date(n.at) : null, hh = t ? ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2) : '';
+  var msg = n.state === 'off' ? '시험용 주소라서 점수가 서버로 가지 않아요' : n.state === 'ok' ? '점수 전송 완료' + (hh ? ' (' + hh + ')' : '') : n.state === 'full' ? '이 반은 접속 기기가 가득 찼어요. 선생님께 알려 주세요' : '점수 전송 대기 중 · 인터넷이 되면 자동으로 올라가요';
+  return '<p class="note">2학년 ' + S.cls + '반 · 내가 보탠 점수 ' + Score.total() + '점<br>' + msg + '</p>';
+}
+
 /* 소리 빠른 스위치(아이콘 하나): 효과음·배경음악 중 하나라도 켜져 있으면 둘 다 끄고, 둘 다 꺼져 있으면 둘 다 켠다 */
 function sndBtn() {
   var on = S.sfx || S.bgm;
@@ -43,7 +62,7 @@ function sMake() {
   h += '</div><h3>닉네임 고르기</h3>' +
     '<div class="pick"><button class="btn small" data-a="adj" data-v="-1" aria-label="이전 꾸밈말">' + ico('left') + '</button><div class="val">' + ADJ[S.nick.a] + '</div><button class="btn small" data-a="adj" data-v="1" aria-label="다음 꾸밈말">' + ico('right') + '</button></div>' +
     '<div class="pick"><button class="btn small" data-a="noun" data-v="-1" aria-label="이전 이름">' + ico('left') + '</button><div class="val">' + NOUN[S.nick.n] + '</div><button class="btn small" data-a="noun" data-v="1" aria-label="다음 이름">' + ico('right') + '</button></div>' +
-    '<button class="btn grape block" data-a="enter">이 모습으로 입장!</button></section>';
+    clsPicker() + '<button class="btn grape block" data-a="enter">이 모습으로 입장!</button></section>';
   return h;
 }
 
@@ -58,7 +77,7 @@ function sListen() {
 function sLobby() {
   var done = clearedCount(), h = '<section class="banner"><h1 data-focus>활동 고르기</h1><p>방송에서 알려 주는 방으로 입장하세요</p></section><div class="pips" aria-label="복구한 방 ' + done + '개">';
   for (var i = 1; i <= 5; i++) h += '<i class="' + (cleared(i) ? 'on' : '') + '"></i>';
-  h += '</div>' + sndRow() + '<div class="stack">';
+  h += '</div>' + (S.cls === null ? '<section class="panel stack">' + clsPicker() + '</section>' : '') + sndRow() + '<div class="stack">';
   ROOMS.forEach(function (r) {
     if (r.id > 5) return;
     var st = cleared(r.id) ? '<span class="st">' + ico('check') + '복구 완료</span>' : (r.ready !== false ? '<span class="st">' + (S.prog[r.id] ? '이어 하기' : '입장') + '</span>' : '<span class="st">준비 중</span>');
@@ -125,7 +144,7 @@ function recordHTML() {
 }
 
 function sMe() {
-  var h = '<section class="panel stack" style="text-align:center"><span class="ribbon" style="align-self:center" data-focus>내 카드</span><div class="disc">' + me() + '</div><h2>' + nickStr() + '</h2><p>' + titleName() + ' · 해설을 읽고 고친 문제 ' + fixedTotal() + '개</p><div class="badges">';
+  var h = '<section class="panel stack" style="text-align:center"><span class="ribbon" style="align-self:center" data-focus>내 카드</span><div class="disc">' + me() + '</div><h2>' + nickStr() + '</h2><p>' + titleName() + ' · 해설을 읽고 고친 문제 ' + fixedTotal() + '개</p>' + scoreLine() + '<div class="badges">';
   ROOMS.forEach(function (r) { h += '<div class="badge' + (cleared(r.id) ? ' on' : '') + '" title="방 ' + r.id + '">' + ico(cleared(r.id) ? r.ic : 'lock') + '</div>'; });
   h += '</div><div style="text-align:left"><h3 style="margin-bottom:10px">받은 칭호</h3><div class="chips">';
   var anyT = false;

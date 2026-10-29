@@ -189,6 +189,11 @@ p{margin:0}
 .chips{display:flex; flex-wrap:wrap; gap:10px}
 .chip{min-height:44px; padding:6px 14px; border:3px solid var(--line); border-radius:999px; background:var(--chip); color:var(--ink); font-weight:700; font-size:15px; cursor:pointer; touch-action:manipulation}
 .chip.on{background:var(--sun); color:var(--sun-ink)}
+.chip:disabled{opacity:.55; cursor:default}
+.clsgrid{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px}
+.chip.clsb{padding:6px 0; font-family:var(--font-display); font-size:18px; text-align:center}
+.chip.clsb.practice{width:100%; font-family:inherit; font-size:15px; padding:6px 14px}
+.warn{color:var(--red); font-weight:700; font-size:15px}
 .fb{border:3px solid var(--line); border-radius:22px; box-shadow:0 5px 0 var(--line); padding:22px 22px; display:flex; flex-direction:column; gap:16px; animation:pop .25s ease-out}
 .fb.ok{background:var(--leaf); color:var(--leaf-ink)}
 .fb.bad{background:var(--coral); color:var(--coral-ink)}
@@ -285,7 +290,13 @@ details[open] summary{margin-bottom:8px}
 #fx{position:fixed; inset:0; z-index:100; display:grid; place-items:center; pointer-events:none; opacity:0; visibility:hidden; transition:opacity .25s, visibility 0s .25s}
 #fx.on{opacity:1; visibility:visible; transition:opacity .1s}
 #fx::before{content:""; position:absolute; inset:0; background:var(--veil); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px)}
+#fx .fxbox{position:relative; display:flex; flex-direction:column; align-items:center; gap:2px}
 #fx svg{position:relative; width:min(56vw,230px); height:auto; filter:drop-shadow(0 7px 0 rgba(0,0,0,.2))}
+#fx .pts{font-family:var(--font-display); font-weight:400; font-size:clamp(36px,13vw,56px); line-height:1; letter-spacing:1px; -webkit-text-stroke:7px var(--line); paint-order:stroke fill; filter:drop-shadow(0 4px 0 rgba(0,0,0,.2))}
+#fx.ok .pts{color:var(--leaf)}
+#fx.bad .pts{color:var(--red)}
+#fx.on .pts{animation:fxpts .5s .12s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes fxpts{0%{transform:translateY(14px) scale(.6); opacity:0}100%{transform:none; opacity:1}}
 #fx.on.ok svg{animation:fxpop .45s cubic-bezier(.2,1.5,.4,1) both}
 #fx.on.bad svg{animation:fxshake .5s both}
 @keyframes fxpop{0%{transform:scale(.4); opacity:0}60%{transform:scale(1.08); opacity:1}100%{transform:scale(1); opacity:1}}

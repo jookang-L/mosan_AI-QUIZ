@@ -16,9 +16,9 @@ var FX_SHAPE = {
   bad: '<svg viewBox="0 0 200 200" fill="none" stroke-linecap="round"><path d="M50 50L150 150M150 50L50 150" style="stroke:var(--line)" stroke-width="38"/><path d="M50 50L150 150M150 50L50 150" style="stroke:var(--red)" stroke-width="22"/></svg>'
 };
 
-function flash(kind) {
+function flash(kind, pts) {
   clearTimeout(fxTimer);
-  fxEl.className = ''; fxEl.innerHTML = FX_SHAPE[kind];
+  fxEl.className = ''; fxEl.innerHTML = '<div class="fxbox">' + FX_SHAPE[kind] + (pts ? '<b class="pts">' + (pts > 0 ? '+' : '−') + Math.abs(pts) + '</b>' : '') + '</div>';
   void fxEl.offsetWidth;
   fxEl.className = 'on ' + kind;
   fxTimer = setTimeout(function () { fxEl.className = ''; }, 800);
@@ -32,19 +32,19 @@ function polish(html) {
 }
 
 function render() {
-  var app = $('app'), h = '', s = UI.screen, fx = null;
+  var app = $('app'), h = '', s = UI.screen, fx = null, fxPts = 0;
   document.documentElement.setAttribute('data-reduce', S.reduce ? '1' : '0');
   if (s === 'title') h = sTitle();
   else if (s === 'make') h = sMake();
   else if (s === 'listen') h = sListen();
   else if (s === 'mission') h = hud() + sMission();
   else if (s === 'lab') h = sLab();
-  else if (s === 'game') { if (G && G.react && G.react.fresh) fx = G.react.kind === 'bad' ? 'bad' : 'ok'; h = sGame(); }
+  else if (s === 'game') { if (G && G.react && G.react.fresh) { fx = G.react.kind === 'bad' ? 'bad' : 'ok'; fxPts = G.react.pts || 0; } h = sGame(); }
   else if (s === 'clear') h = sClear();
   else { h = hud() + (UI.tab === 'dex' ? sDex() : UI.tab === 'me' ? sMe() : sLobby()) + tabs(); }
   app.innerHTML = polish('<div class="app">' + h + '</div>');
   if (s === 'lab') placeLab();
-  if (fx) { flash(fx); SND.judge(fx); }
+  if (fx) { flash(fx, fxPts); SND.judge(fx); }
   SND.sync();
   if (UI.snap) {
     var t = app.querySelector(UI.snap); UI.snap = null;
@@ -71,8 +71,11 @@ function act(a, el) {
     case 'chcolor': S.char.color = +v; render(); break;
     case 'adj': S.nick.a = wrap(S.nick.a, +v, ADJ.length); render(); break;
     case 'noun': S.nick.n = wrap(S.nick.n, +v, NOUN.length); render(); break;
-    case 'enter': S.started = true; save(); UI.back = null; go('listen'); break;
-    case 'listen': UI.back = (UI.screen === 'listen' || UI.screen === 'clear') ? null : UI.screen; go('listen'); break;
+    case 'enter':
+      if (S.cls === null) { UI.needCls = true; render(); break; }
+      S.started = true; save(); NET.flush(true); UI.back = null; go('listen'); break;
+    case 'cls': if (S.clsLock) break; S.cls = +v; UI.needCls = false; save(); NET.flush(true); render(); break;
+    case 'listen': NET.flush(); UI.back = (UI.screen === 'listen' || UI.screen === 'clear') ? null : UI.screen; go('listen'); break;
     case 'resumeact':
       if (UI.back && (G || UI.back === 'main' || UI.back === 'mission')) { var b = UI.back; UI.back = null; go(b); } else { UI.back = null; UI.tab = 'lobby'; go('main'); }
       break;
@@ -95,8 +98,8 @@ function act(a, el) {
     case 'gord': tapOrder(+v); render(); break;
     case 'gchoice':
       g = game(); k = key(0); s = G.st[k] || 'u'; if (isDone(s)) break;
-      if (+v === g.a) { G.st[k] = s === 'u' ? 'ok' : 'fixed'; G.popKey = k; react(G.st[k]); if (gameDone(G.gi)) G.boot = G.gi; }
-      else { G.st[k] = 'broken'; (G.picks[k] = G.picks[k] || []).push(+v); react('bad'); }
+      if (+v === g.a) { G.st[k] = s === 'u' ? 'ok' : 'fixed'; G.popKey = k; react(G.st[k], Score.settle(k)); if (gameDone(G.gi)) { G.boot = G.gi; NET.flush(); } }
+      else { G.st[k] = 'broken'; notePick(G.picks[k] = G.picks[k] || [], +v); react('bad', Score.wrong(k)); }
       saveProg(); render(); break;
     case 'gfinish': finishRoom(); break;
     case 'title': S.titleId = +v; save(); render(); break;
