@@ -23,6 +23,10 @@
   var busy = false, gen = 0, sess = null, board = null, frozen = false, lastOk = 0, err = '', prevRank = null, toastT = null, upT = {}, rh = 40, built = 0, timer = null, demo = null;
   try { sess = JSON.parse(sessionStorage.getItem('aiq-admin-sess')); } catch (e) {}
 
+  /* 역전 연출과 마지막 스퍼트. TOP위 안에서 일어난 역전만 알려 주고, 종료 시각(t, 밀리초)과 스퍼트 시작 분(m)은 이 컴퓨터에만 저장한다(데모는 따로). */
+  var TOP = 5, END_KEY = DEMO ? 'aiq-admin-end-demo' : 'aiq-admin-end', END = jget(END_KEY, { t: 0, m: 10 });
+  var flipT = null, flipAt = 0, burstT = null, chgT = {}, lastPhase, spOn = false;
+
   /* ---------- 로그인과 서버 호출 ---------- */
   function saveSess(j) {
     sess = { a: j.access_token, r: j.refresh_token, e: Date.now() + (j.expires_in || 3600) * 1000 };
@@ -93,17 +97,17 @@
     var rows = '', i;
     for (i = 1; i <= n; i++) {
       var h = (i * 47) % 360;
-      rows += '<div class="row" id="r' + i + '" data-c="' + i + '"><div class="rank"></div><div class="cls">' + i + '반</div><div class="track"><div class="fill" style="background:linear-gradient(90deg,hsl(' + h + ' 70% 46%),hsl(' + h + ' 85% 62%))"></div></div><div class="val"><b></b><span></span></div></div>';
+      rows += '<div class="row" id="r' + i + '" data-c="' + i + '"><div class="rank"></div><div class="chg"></div><div class="cls">' + i + '반</div><div class="track"><div class="fill" style="background:linear-gradient(90deg,hsl(' + h + ' 70% 46%),hsl(' + h + ' 85% 62%))"></div></div><div class="val"><b></b><span></span></div></div>';
     }
     root.innerHTML = '<div class="wrap" id="wrap"><header class="top"><h1>AI 골든벨 반 대항전</h1><span class="sub" id="sub"></span><span class="sp"></span>' +
-      '<span class="stat" id="st"><i></i><span id="stx">연결 중…</span></span>' +
+      '<span class="stat cd" id="cd" hidden></span><span class="stat" id="st"><i></i><span id="stx">연결 중…</span></span>' +
       '<div class="tools"><button class="btn ghost" id="b-hide"></button><button class="btn ghost" id="b-frz"></button><button class="btn ghost" id="b-ana">분석</button><button class="btn ghost" id="b-set">설정</button><button class="btn ghost" id="b-full">전체화면</button></div></header>' +
-      '<main class="board" id="board">' + rows + '<div class="cover" id="cover" hidden><div>점수는 비공개예요<small>공개하면 순위가 짠! 하고 자리를 잡아요</small></div></div></main>' +
-      '<footer class="foot">H 점수 숨김·공개 · F 화면 고정 · 학생이 문제를 풀면 몇 초 안에 순위판에 반영돼요</footer></div><div class="toast" id="toast"></div><div id="modal"></div>';
-    built = n;
+      '<div class="sprint" id="sprint" hidden></div><main class="board" id="board">' + rows + '<div class="cover" id="cover" hidden><div>점수는 비공개예요<small>공개하면 순위가 짠! 하고 자리를 잡아요</small></div></div></main>' +
+      '<footer class="foot">H 점수 숨김·공개 · F 화면 고정 · 학생이 문제를 풀면 몇 초 안에 순위판에 반영돼요</footer></div><div class="toast" id="toast"></div><div class="flip" id="flip" role="status"><b></b><span></span></div><div class="burst" id="burst" role="status"><div><b></b><span></span></div></div><div id="modal"></div>';
+    built = n; spOn = false;
     $('b-hide').onclick = toggleHide; $('b-frz').onclick = toggleFreeze; $('b-ana').onclick = openAnalysis; $('b-set').onclick = openSettings;
     $('b-full').onclick = function () { var d = document.documentElement; if (document.fullscreenElement) document.exitFullscreen(); else if (d.requestFullscreen) d.requestFullscreen(); };
-    buttons(); layout();
+    buttons(); layout(); paintClock();
   }
 
   function buttons() {
@@ -155,31 +159,117 @@
     toastT = setTimeout(function () { t.classList.remove('on'); }, 4500);
   }
 
-  /* 새 집계가 오면: 순위가 바뀐 반을 알려 준다 */
+  /* ---------- 역전 연출 ----------
+   * 지난 집계에서 뒤에 있던 반이 이번에 앞 반을 제치면 "역전". 앞지른 반이 TOP위 안일 때만 알린다.
+   * 점수를 숨긴 동안과 화면 고정 중에는 알리지 않는다(순위가 새어 나가면 안 되니까). */
+  function flips(rk) {
+    var cl = rk.order.map(function (x) { return x.c.cls; }), per = {}, ev = {};
+    rk.order.forEach(function (x) { per[x.c.cls] = x.per; });
+    cl.forEach(function (a) {
+      if (prevRank[a] === undefined || rk.rank[a] > TOP || !(per[a] > 0)) return;
+      cl.forEach(function (b) {
+        if (a !== b && prevRank[b] !== undefined && prevRank[a] > prevRank[b] && rk.rank[a] < rk.rank[b]) (ev[a] = ev[a] || []).push(b);
+      });
+    });
+    return ev;   // { 앞지른 반: [제친 반들] }
+  }
+
+  /* 순위표 옆 ▲▼ 표시와 노란 테두리(몇 초 뒤 저절로 사라진다) */
+  function mark(c, dir, n) {
+    var el = $('r' + c); if (!el) return;
+    var g = el.querySelector('.chg');
+    g.className = 'chg ' + dir; g.textContent = (dir === 'up' ? '▲' : '▼') + n;
+    clearTimeout(chgT[c]); chgT[c] = setTimeout(function () { g.className = 'chg'; g.textContent = ''; }, 6000);
+    if (dir === 'up') { el.classList.add('up'); clearTimeout(upT[c]); upT[c] = setTimeout(function () { el.classList.remove('up'); }, 4000); }
+  }
+
+  function clearFx() {
+    var f = $('flip'), c;
+    clearTimeout(flipT); if (f) f.className = 'flip';
+    for (c in chgT) { clearTimeout(chgT[c]); var el = $('r' + c); if (el) { el.querySelector('.chg').className = 'chg'; el.querySelector('.chg').textContent = ''; } }
+    for (c in upT) { clearTimeout(upT[c]); var r = $('r' + c); if (r) r.classList.remove('up'); }
+    chgT = {}; upT = {};
+  }
+
+  function showFlip(h, s, lead) {
+    var f = $('flip'); if (!f) return;
+    f.querySelector('b').textContent = h; f.querySelector('span').textContent = s;
+    f.className = 'flip on' + (lead ? ' lead' : '');
+    clearTimeout(flipT); flipT = setTimeout(function () { f.className = 'flip'; }, lead ? 5200 : 3800);
+  }
+
+  function announce(rk) {
+    var ev = flips(rk), ids = Object.keys(ev), lead = 0, best = 0, a, bs, names, ph, cool;
+    if (!ids.length) return;
+    ids.forEach(function (k) {
+      var c = +k, n = rk.rank[c];
+      mark(c, 'up', prevRank[c] - n);
+      ev[k].forEach(function (b) { if (rk.rank[b] > prevRank[b]) mark(b, 'dn', rk.rank[b] - prevRank[b]); });
+      if (n === 1 && prevRank[c] !== 1 && rk.ties[1] === 1) lead = c;
+      if (!best || n < rk.rank[best] || (n === rk.rank[best] && prevRank[c] - n > prevRank[best] - rk.rank[best])) best = c;
+    });
+    ph = phase(); cool = (ph && (ph.k === 'spurt' || ph.k === 'last')) ? 6000 : 12000;   // 너무 잦으면 정신없어서 간격을 둔다(1위가 바뀔 때는 늘 알린다)
+    if (!lead && Date.now() - flipAt < cool) return;
+    a = lead || best;
+    bs = ev[a].slice().sort(function (p, q) { return prevRank[p] - prevRank[q] || p - q; });   // 원래 더 높았던 반부터
+    names = bs.slice(0, 2).map(function (c) { return c + '반'; }).join('·') + (bs.length > 2 ? ' 외 ' + (bs.length - 2) + '반' : '');
+    showFlip(lead ? '👑 1위 교체!' : '🔄 역전!', a + '반이 ' + names + '을 제쳤어요 · ' + prevRank[a] + '위 → ' + rk.rank[a] + '위', !!lead);
+    flipAt = Date.now();
+  }
+
+  /* ---------- 종료 시각과 마지막 스퍼트 ---------- */
+  function fmtLeft(ms) { var s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return (h ? h + ':' + pad(m) : pad(m)) + ':' + pad(s % 60); }
+
+  /* wait(아직 멀었어요) → spurt(마지막 N분) → last(마지막 1분) → over(끝). 끝난 지 30분이 지나면 잊는다 */
+  function phase() {
+    if (!END.t) return null;
+    var left = END.t - Date.now();
+    if (left <= -30 * 60000) return null;
+    if (left <= 0) return { k: 'over', left: 0 };
+    if (left <= 60000) return { k: 'last', left: left };
+    if (left <= END.m * 60000) return { k: 'spurt', left: left };
+    return { k: 'wait', left: left };
+  }
+
+  function burst(k, p) {
+    var b = $('burst'); if (!b) return;
+    var t = { spurt: ['🔥 마지막 스퍼트!', Math.ceil(p.left / 60000) + '분 남았어요. 한 문제라도 더 풀어요!'], last: ['⏱ 마지막 1분!', '끝까지 힘내요!'], over: ['🏁 시간 종료!', VIEW.hide ? 'H 키를 눌러 점수를 공개해요' : '수고했어요! 순위를 확인해요'] }[k];
+    b.className = 'burst on ' + k; b.querySelector('b').textContent = t[0]; b.querySelector('span').textContent = t[1];
+    clearTimeout(burstT); burstT = setTimeout(function () { b.className = 'burst ' + k; }, 3600);
+  }
+
+  /* 1초마다: 남은 시간 칩, 스퍼트 띠, 단계가 바뀔 때의 큰 알림 */
+  function paintClock() {
+    var sp = $('sprint'), cd = $('cd'); if (!sp || !cd) return;
+    var p = phase(), k = p ? p.k : 'none', on = k === 'spurt' || k === 'last' || k === 'over';
+    if (k !== lastPhase) { if (lastPhase !== undefined && on) burst(k, p); lastPhase = k; }
+    cd.hidden = k !== 'wait'; if (k === 'wait') cd.textContent = '⏱ 종료까지 ' + fmtLeft(p.left);
+    sp.hidden = !on;
+    if (on) {
+      var hint = k === 'over' ? (VIEW.hide ? 'H 점수 공개 · F 화면 고정' : 'F 화면 고정으로 순위를 굳힐 수 있어요') : (VIEW.hide ? 'H 키로 점수 공개' : '');
+      sp.className = 'sprint ' + k;
+      sp.innerHTML = '<b>' + (k === 'spurt' ? '🔥 마지막 스퍼트!' : k === 'last' ? '⏱ 마지막 1분!' : '🏁 시간 종료') + '</b>' + (hint ? '<small>' + hint + '</small>' : '') + (k === 'over' ? '' : '<strong>' + fmtLeft(p.left) + '</strong>');
+    }
+    if (on !== spOn) { spOn = on; layout(); }   // 띠가 생기거나 사라지면 순위 칸 높이를 다시 맞춘다
+  }
+
+  /* 새 집계가 오면: 역전을 알리고 순위판을 다시 그린다 */
   function apply() {
     if (frozen) { paintStatus(); return; }
     var rk = ranked(board);
-    if (prevRank && !VIEW.hide) {
-      var best = null, first = null, c;
-      rk.order.forEach(function (x) {
-        c = x.c.cls;
-        var was = prevRank[c], now = rk.rank[c];
-        if (was !== undefined && now < was) { if (!best || was - now > best.d) best = { c: c, d: was - now, now: now }; }
-        if (now === 1 && was !== 1 && rk.ties[1] === 1 && x.per > 0) first = c;
-        if (was !== undefined && now < was) { var el = $('r' + c); if (el) { el.classList.add('up'); clearTimeout(upT[c]); upT[c] = setTimeout(function (e) { return function () { e.classList.remove('up'); }; }(el), 4000); } }
-      });
-      if (first) toast('👑 ' + first + '반이 1위로 올라섰어요!');
-      else if (best) toast('🔥 ' + best.c + '반이 ' + best.now + '위로 올라왔어요!');
-    }
+    if (prevRank && !VIEW.hide) announce(rk);
     prevRank = rk.rank;
     paint();
   }
 
-  function toggleHide() { VIEW.hide = !VIEW.hide; jset('aiq-admin-view', VIEW); if (!VIEW.hide && board) prevRank = ranked(board).rank; buttons(); paint(); }
-  function toggleFreeze() { frozen = !frozen; buttons(); if (!frozen && board) apply(); else paintStatus(); }
+  function toggleHide() { VIEW.hide = !VIEW.hide; jset('aiq-admin-view', VIEW); if (VIEW.hide) clearFx(); else if (board) prevRank = ranked(board).rank; buttons(); paint(); paintClock(); }
+  function toggleFreeze() { frozen = !frozen; buttons(); if (!frozen && board) { prevRank = null; apply(); } else paintStatus(); }   // 고정을 풀 때는 그동안 바뀐 것을 한꺼번에 알리지 않는다
 
   /* ---------- 설정·분석 창 ---------- */
   function closeModal() { $('modal').innerHTML = ''; }
+
+  /* 설정 창의 시간 칸에 넣을 값: 오늘의 종료 시각이면 "HH:MM", 아니면 빈 칸 */
+  function endVal() { if (!END.t || new Date(END.t).toDateString() !== new Date().toDateString()) return ''; var d = new Date(END.t); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
 
   function openSettings() {
     var cl = board ? board.classes : [], h = '<div class="modal"><div class="sheet" role="dialog" aria-label="설정"><h2>설정</h2><h3>반별 인원</h3><p>순위에는 쓰이지 않아요(반 점수는 학생들이 받은 점수의 합이에요). 반별 "접속 n/인원명" 표시와, 가짜 기기를 막는 상한(인원의 1.5배+3대)에 쓰여요. 접속 기기가 인원보다 많으면 순위판에 ⚠가 떠요.</p><div class="grid">';
@@ -187,15 +277,30 @@
     h += '</div><h3>점수 규칙</h3><p>화면 계산에만 쓰이는 값이라 언제든 바꿀 수 있어요. 바꾸면 지금까지의 점수도 새 규칙으로 다시 계산돼요.</p><div class="rule">' +
       '<label>한 번에 정답 +<input data-r="a" type="number" value="' + RULE.a + '"></label><label>틀릴 때마다 −<input data-r="b" type="number" value="' + RULE.b + '"></label>' +
       '<label>수리 +<input data-r="c" type="number" value="' + RULE.c + '"></label><label>종합 도전 ×<input data-r="fm" type="number" value="' + RULE.fm + '"></label></div>' +
+      '<h3>종료 시각 · 마지막 스퍼트</h3><p>종료 시각을 정하면 위쪽에 남은 시간이 보이고, 마지막 몇 분이 되면 "마지막 스퍼트!" 배너가 떠요. 점수는 저절로 공개되지 않아요(H 키로 직접). 시간이 끝나도 점수 반영은 멈추지 않으니, 순위를 굳히려면 F 키로 화면을 고정하세요.</p><div class="rule">' +
+      '<label>종료 시각 <input id="endt" type="time" value="' + endVal() + '" style="width:130px"></label><label>또는 지금부터 <input id="endin" type="number" min="1" max="300" placeholder="분"> 분 뒤</label>' +
+      '<label>스퍼트 시작 <input id="spm" type="number" min="1" max="30" value="' + END.m + '"> 분 전</label><button class="btn ghost" id="end-clr" type="button" style="height:40px;font-size:15px">종료 시각 지우기</button></div>' +
       '<h3>점수 초기화</h3><p>리허설 기록을 모두 지워요. 되돌릴 수 없어요. 아래 칸에 "초기화"라고 입력해야 눌러져요.</p><div class="acts"><input id="rs" placeholder="초기화" style="height:40px;border-radius:10px;border:2px solid var(--line);background:var(--bg);padding:0 10px;color:#fff"><button class="btn danger" id="do-rs">모두 지우기</button></div>' +
       '<div class="err" id="se"></div><div class="acts"><button class="btn ghost" id="x-out">로그아웃</button><button class="btn ghost" id="x-close">닫기</button><button class="btn" id="x-save">저장</button></div></div></div>';
     $('modal').innerHTML = h;
     $('x-close').onclick = closeModal;
+    $('end-clr').onclick = function () { END.t = 0; jset(END_KEY, END); $('endt').value = ''; $('endin').value = ''; paintClock(); };
     $('x-out').onclick = function () { sess = null; try { sessionStorage.removeItem('aiq-admin-sess'); } catch (e) {} closeModal(); showLogin(''); };
     $('x-save').onclick = function () {
       var inputs = $('modal').querySelectorAll('[data-r]'), i, chg = [];
+      var spm = Math.round(parseFloat($('spm').value)), eIn = $('endin').value, eT = $('endt').value, newEnd = END.t, mins, tm, dd;
+      if (!(spm >= 1 && spm <= 30)) { $('se').textContent = '스퍼트 시작은 1~30분 전으로 넣어 주세요'; return; }
+      if (eIn !== '') {
+        mins = parseFloat(eIn);
+        if (!(mins >= 1 && mins <= 300)) { $('se').textContent = '"지금부터 몇 분 뒤"는 1~300 사이로 넣어 주세요'; return; }
+        newEnd = Date.now() + mins * 60000;
+      } else if (eT && eT !== endVal()) {
+        tm = /^(\d\d):(\d\d)$/.exec(eT); dd = new Date(); dd.setHours(+tm[1], +tm[2], 0, 0); newEnd = dd.getTime();
+        if (newEnd < Date.now() - 30 * 60000) { $('se').textContent = '이미 지난 시각이에요. 종료 시각을 다시 넣어 주세요'; return; }
+      }
       for (i = 0; i < inputs.length; i++) { var v = parseFloat(inputs[i].value); if (!isFinite(v) || v < 0) { $('se').textContent = '점수는 0 이상의 숫자로 넣어 주세요'; return; } RULE[inputs[i].getAttribute('data-r')] = v; }
       jset('aiq-admin-rule', RULE);
+      if (newEnd !== END.t || spm !== END.m) { END.t = newEnd; END.m = spm; jset(END_KEY, END); lastPhase = 'none'; paintClock(); }   // 시각을 바꾸면 해당 단계의 큰 알림이 바로 뜬다
       var hc = $('modal').querySelectorAll('[data-hc]');
       for (i = 0; i < hc.length; i++) { var n = Math.round(parseFloat(hc[i].value)), cn = +hc[i].getAttribute('data-hc'), cur = cl.filter(function (c) { return c.cls === cn; })[0]; if (cur && n >= 1 && n <= 100 && n !== cur.headcount) chg.push([cn, n]); }
       $('se').textContent = '저장하는 중…';
@@ -291,7 +396,7 @@
   }
 
   window.addEventListener('resize', layout);
-  setInterval(paintStatus, 1000);
+  setInterval(function () { paintStatus(); paintClock(); }, 1000);
   document.addEventListener('keydown', function (e) {
     if (!built || /INPUT|TEXTAREA/.test(e.target.tagName) || $('modal').firstChild) return;
     if (e.key === 'h' || e.key === 'H') toggleHide(); else if (e.key === 'f' || e.key === 'F') toggleFreeze();
