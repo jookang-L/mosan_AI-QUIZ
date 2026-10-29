@@ -52,7 +52,7 @@ function completeItem(i) {
   var k = key(i), was = gameDone(G.gi);
   G.st[k] = G.miss[k] ? 'fixed' : 'ok'; delete G.stage[k];
   G.popKey = k; G.pulseKey = k; react(G.st[k], Score.settle(k)); G.sel = -1;
-  if (!was && gameDone(G.gi)) { G.boot = G.gi; NET.flush(); }
+  if (!was && gameDone(G.gi)) { G.boot = G.gi; NET.soon(); }
 }
 
 /* 틀린 보기를 화면에 표시하려고 기록만 한다. 같은 오답을 또 눌러도 감점은 누를 때마다 들어간다(Score.wrong) */
@@ -97,7 +97,7 @@ function finishRoom() {
     if (it) S.equip[it.slot] = it.id;
     delete S.prog[id];
   }
-  save(); NET.flush(); UI.roomId = id; UI.back = null; UI.keys = allKeys().map(function (k) { return G.st[k]; }); dropG(); go('clear');
+  save(); NET.soon(); UI.roomId = id; UI.back = null; UI.keys = allKeys().map(function (k) { return G.st[k]; }); dropG(); go('clear');
 }
 
 /* 개념 확인 기록: S.topics[개념] = 'ok'(바로 맞힘) | 'fixed'(해설을 읽고 고침). 다시 도전하거나 종합 도전에서 만나면 최신 결과로 바뀐다. */

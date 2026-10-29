@@ -73,9 +73,9 @@ function act(a, el) {
     case 'noun': S.nick.n = wrap(S.nick.n, +v, NOUN.length); render(); break;
     case 'enter':
       if (S.cls === null) { UI.needCls = true; render(); break; }
-      S.started = true; save(); NET.flush(true); UI.back = null; go('listen'); break;
-    case 'cls': if (S.clsLock || !(+v > 0)) break; S.cls = +v; UI.needCls = false; save(); NET.flush(true); render(); break;
-    case 'listen': NET.flush(); UI.back = (UI.screen === 'listen' || UI.screen === 'clear') ? null : UI.screen; go('listen'); break;
+      S.started = true; save(); NET.soon(true); UI.back = null; go('listen'); break;
+    case 'cls': if (S.clsLock || !(+v > 0)) break; S.cls = +v; UI.needCls = false; save(); NET.soon(true); render(); break;
+    case 'listen': NET.soon(); UI.back = (UI.screen === 'listen' || UI.screen === 'clear') ? null : UI.screen; go('listen'); break;
     case 'resumeact':
       if (UI.back && (G || UI.back === 'main' || UI.back === 'mission')) { var b = UI.back; UI.back = null; go(b); } else { UI.back = null; UI.tab = 'lobby'; go('main'); }
       break;
@@ -98,7 +98,7 @@ function act(a, el) {
     case 'gord': tapOrder(+v); render(); break;
     case 'gchoice':
       g = game(); k = key(0); s = G.st[k] || 'u'; if (isDone(s)) break;
-      if (+v === g.a) { G.st[k] = s === 'u' ? 'ok' : 'fixed'; G.popKey = k; react(G.st[k], Score.settle(k)); if (gameDone(G.gi)) { G.boot = G.gi; NET.flush(); } }
+      if (+v === g.a) { G.st[k] = s === 'u' ? 'ok' : 'fixed'; G.popKey = k; react(G.st[k], Score.settle(k)); if (gameDone(G.gi)) { G.boot = G.gi; NET.soon(); } }
       else { G.st[k] = 'broken'; notePick(G.picks[k] = G.picks[k] || [], +v); react('bad', Score.wrong(k)); }
       saveProg(); render(); break;
     case 'gfinish': finishRoom(); break;

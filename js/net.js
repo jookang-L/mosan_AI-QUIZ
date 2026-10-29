@@ -76,5 +76,8 @@ var NET = (function () {
     return { state: (st.ok && !dirty) ? 'ok' : 'wait', at: st.at };
   }
 
-  return { mark: mark, flush: flush, info: info };
+  /* 급하지 않은 올리기는 0~1.5초 흩어서 보낸다(방송 신호에 맞춰 수백 대가 같은 순간에 올리는 일을 줄인다) */
+  function soon(force) { setTimeout(function () { flush(force); }, Math.random() * 1500); }
+
+  return { mark: mark, flush: flush, soon: soon, info: info };
 })();
