@@ -319,7 +319,7 @@
     var m = /^(\d+):(\d+)\.(\d+)$/.exec(key); if (!m) return null;
     var room = +m[1] === 6 ? C.final : C.rooms[+m[1]], g = room && room.games[+m[2]], it, text;
     if (!g) return null;
-    it = g.kind === 'choice' ? g : g.items[+m[3]]; if (!it) return null;
+    it = g.kind === 'choice' ? g : g.items.find(function (item, i) { return (item.scoreIndex === undefined ? i : item.scoreIndex) === +m[3]; }); if (!it) return null;
     text = g.kind === 'choice' ? g.q : g.kind === 'order' ? it.label : it.t;
     return { room: room.title, game: g.name, text: strip(text), topic: strip(it.topic), ref: it.ref || g.ref || '' };
   }
@@ -343,7 +343,7 @@
     [1, 2, 3, 4, 5, 6].forEach(function (r) {
       var room = r === 6 ? C.final : C.rooms[r];
       if (!room) return;
-      room.games.forEach(function (g, gi) { var n = g.kind === 'choice' ? 1 : g.items.length, i; for (i = 0; i < n; i++) a.push(r + ':' + gi + '.' + i); });
+      room.games.forEach(function (g, gi) { (g.kind === 'choice' ? [g] : g.items).forEach(function (item, i) { a.push(r + ':' + gi + '.' + (item.scoreIndex === undefined ? i : item.scoreIndex)); }); });
     });
     return a;
   }

@@ -124,5 +124,6 @@ document.addEventListener('keydown', function (e) {
   if (m) { e.preventDefault(); labStep(m[0], m[1]); }
 });
 
+migrateReducedQuestions();
 migrateTopics();
 render();

@@ -75,7 +75,7 @@ function sListen() {
 }
 
 function sLobby() {
-  var done = clearedCount(), h = '<section class="banner"><h1 data-focus>활동 고르기</h1><p>방송에서 알려 주는 방으로 입장하세요</p></section><div class="pips" aria-label="복구한 방 ' + done + '개">';
+  var done = clearedCount(), h = '<section class="banner"><h1 data-focus>활동 고르기</h1><p>선생님이 안내하는 방으로 입장하세요.</p></section><div class="pips" aria-label="복구한 방 ' + done + '개">';
   for (var i = 1; i <= 5; i++) h += '<i class="' + (cleared(i) ? 'on' : '') + '"></i>';
   h += '</div>' + (S.cls === null ? '<section class="panel stack">' + clsPicker() + '</section>' : '') + sndRow() + '<div class="stack">';
   ROOMS.forEach(function (r) {
@@ -85,7 +85,7 @@ function sLobby() {
   });
   var fin = room(6);
   if (fin) {
-    var fdone = cleared(6), open = done === 5;
+    var fdone = cleared(6), open = true;
     h += '<button class="room' + (fdone ? ' done' : open ? ' go' : ' wip') + '" data-a="' + (open || fdone ? 'room' : 'none') + '" data-v="6"><span class="num">' + ico('trophy') + '</span><span class="tx"><b>' + fin.title + '</b><span>' + (open || fdone ? fin.sub : '방 5개를 모두 복구하면 열려요') + '</span></span><span class="st">' + (fdone ? ico('check') + '복구 완료' : open ? '입장' : '잠김') + '</span></button>';
   }
   h += '</div>';

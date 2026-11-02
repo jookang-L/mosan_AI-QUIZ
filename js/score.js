@@ -9,7 +9,10 @@
 var Score = (function () {
   var A = 10, B = 2, C = 6;
 
-  function id(k) { return G.room.id + ':' + k; }
+  function id(k) {
+    var item = itemOf(k), original = item.scoreIndex;
+    return G.room.id + ':' + (original === undefined ? k : k.split('.')[0] + '.' + original);
+  }
   function mult(i) { return i.charAt(0) === '6' ? 2 : 1; }
 
   function wrong(k) {

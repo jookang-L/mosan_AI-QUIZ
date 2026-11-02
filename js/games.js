@@ -5,6 +5,8 @@ function game() { return G.room.games[G.gi]; }
 
 function gcount(g) { return g.kind === 'choice' ? 1 : g.items.length; }
 
+function gameIndices(r) { return r.displayOrder || r.games.map(function (_, i) { return i; }); }
+
 function key(i) { return G.gi + '.' + i; }
 
 function allKeys() { var a = []; G.room.games.forEach(function (g, gi) { for (var i = 0; i < gcount(g); i++) a.push(gi + '.' + i); }); return a; }
@@ -40,6 +42,10 @@ function clearedStates(r) {
 function startGame(r) {
   var p = S.prog[r.id] || {}, done = cleared(r.id) ? clearedStates(r) : null;
   G = { room: r, gi: 0, st: done || p.st || {}, picks: p.picks || {}, stage: p.stage || {}, miss: p.miss || {}, fixWrong: p.fixWrong || {}, fixOrder: {}, ord: {}, mpos: mposFor(r.games.length), badTap: null, boot: null, popKey: null, pulseKey: null, sel: -1, react: null, bub: '', pc: 3, pr: 4, walk: null, walkT: null };
+  if (r.displayOrder) {
+    var positions = mposFor(r.games.length);
+    r.displayOrder.forEach(function (gi, displayIndex) { G.mpos[gi] = positions[displayIndex]; });
+  }
   if (r.noLab) { G.gi = 0; prepGame(); go('game'); } else go('lab');
 }
 
@@ -105,6 +111,44 @@ function conceptOf(t) { return t.replace(/:.*$/, ''); }
 
 function eachItem(r, fn) { r.games.forEach(function (g) { (g.kind === 'choice' ? [g] : g.items).forEach(fn); }); }
 
+/* 44문항 때의 진행은 새 화면 인덱스로 옮기고, 점수 장부는 원래 키 그대로 둔다. */
+function migrateReducedQuestions() {
+  if (S.questionRevision === '30-v1') return;
+  ROOMS.forEach(function (r) {
+    if (r.id === 6) return;
+    function remap(old) {
+      var result = {};
+      r.games.forEach(function (g, gi) {
+        (g.kind === 'choice' ? [g] : g.items).forEach(function (it, i) {
+          var previous = gi + '.' + (it.scoreIndex === undefined ? i : it.scoreIndex);
+          if (old && Object.prototype.hasOwnProperty.call(old, previous)) result[gi + '.' + i] = old[previous];
+        });
+      });
+      return result;
+    }
+    var pending = S.prog[r.id];
+    if (pending) ['st', 'picks', 'stage', 'miss', 'fixWrong'].forEach(function (field) { pending[field] = remap(pending[field]); });
+    var info = S.rooms[r.id];
+    if (info && info.cleared) {
+      info.st = info.st ? remap(info.st) : clearedStates(r);
+      info.ok = 0; info.fixed = 0; info.weak = [];
+      var seen = {};
+      r.games.forEach(function (g, gi) {
+        (g.kind === 'choice' ? [g] : g.items).forEach(function (it, i) {
+          var status = info.st[gi + '.' + i];
+          if (status === 'ok') info.ok++;
+          else {
+            info.fixed++;
+            if (!seen[it.topic]) { seen[it.topic] = true; info.weak.push({ topic: it.topic, ref: it.ref }); }
+          }
+        });
+      });
+    }
+  });
+  S.questionRevision = '30-v1';
+  save();
+}
+
 function conceptList() {
   var a = [], seen = {};
   ROOMS.forEach(function (r) {
@@ -167,7 +211,8 @@ function sLab() {
     '<section class="stack"><div class="ghud"><div class="av' + (booted ? ' jump' : '') + '">' + me() + '</div><div class="bubble" data-focus role="status">' + say + '</div></div><div>' + gaugeBlock() + '</div></section>' +
     '<div class="plate' + (rem === 0 ? ' on' : '') + '" role="status"><span>' + G.room.lab + '</span><b>' + (rem === 0 ? '가동 중' : '점검 중') + '</b></div>' +
     '<div class="lab" id="lab" style="--dim:' + (0.26 * rem / total).toFixed(2) + '"><div class="wall" aria-hidden="true"></div>';
-  G.room.games.forEach(function (g, gi) {
+  gameIndices(G.room).forEach(function (gi) {
+    var g = G.room.games[gi];
     var d = gameDone(gi), cx = G.mpos[gi].c * 100 / 7 + 100 / 14;
     h += '<i class="lamp' + (d ? ' on' : '') + '" style="left:' + cx + '%" aria-hidden="true"></i><i class="cable' + (d ? ' on' : '') + '" style="left:' + cx + '%" aria-hidden="true"></i>' +
       '<button class="mach ' + (d ? 'ok' : 'bad') + (booted && boot === gi ? ' boot' : '') + '" data-a="mach" data-v="' + gi + '" aria-label="' + (gi + 1) + '번 ' + g.mname + ' ' + (d ? '정상' : '고장') + '" style="left:' + (G.mpos[gi].c * 100 / 7) + '%;top:' + (G.mpos[gi].r * 20) + '%"><span class="box">' + ico(d ? 'check' : g.mic) + '</span><span class="mn">' + (gi + 1) + '</span></button>';
@@ -178,7 +223,8 @@ function sLab() {
     '<p class="note">기계 쪽으로 걸어가면 바로 시작해요.<br>기계를 눌러도 알아서 걸어가요.</p></div>' +
     (rem === 0 ? '<button class="btn grape block" data-a="gfinish">결과 보기' + ico('right') + '</button>' : '') +
     '<section class="stack"><h3>바로 가기</h3>';
-  G.room.games.forEach(function (g, gi) {
+  gameIndices(G.room).forEach(function (gi) {
+    var g = G.room.games[gi];
     var d = gameDone(gi);
     h += '<button class="room' + (d ? ' done' : '') + '" data-a="mopen" data-v="' + gi + '"><span class="num">' + (gi + 1) + '</span><span class="tx"><b>' + g.mname + '</b><span>' + g.name + ' · ' + machProg(gi) + '</span></span><span class="st">' + (d ? ico('check') + '정상' : ico('bug') + '고장') + '</span></button>';
   });
